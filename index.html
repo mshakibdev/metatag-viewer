@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8" />
+        <title>Preview &amp; Generate Open Graph Meta Tags</title>
+        <style>
+            /* ===== HEADER ===== */
+            body {
+                margin: 0;
+                font-family: sans-serif;
+            }
+
+            .header {
+                background: #4f46e5;
+                color: white;
+                padding: 2rem 1rem;
+                text-align: center;
+            }
+
+            .header h1 {
+                margin: 0;
+                font-size: 2rem;
+            }
+
+            .header-controls {
+                margin-top: 1rem;
+            }
+
+            .header-controls input {
+                width: 300px;
+                padding: .6rem;
+                border: none;
+                border-radius: 4px 0 0 4px;
+                outline: none;
+            }
+
+            .header-controls button {
+                padding: .6rem 1rem;
+                border: none;
+                background: #3b366f;
+                color: white;
+                border-radius: 0 4px 4px 0;
+                cursor: pointer;
+            }
+
+            /* ===== 3‑COLUMN LAYOUT ===== */
+            .container {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                height: calc(100vh - 180px);
+                /* adjust for header */
+            }
+
+            .column {
+                padding: 1rem;
+                box-sizing: border-box;
+                overflow-y: auto;
+            }
+
+            .column:nth-child(1),
+            .column:nth-child(2) {
+                border-right: 1px solid #ddd;
+            }
+
+            h2 {
+                margin-top: 0;
+            }
+
+            /* ===== FORM & CODE ===== */
+            label {
+                display: block;
+                font-weight: bold;
+                margin-bottom: .3rem;
+            }
+
+            input[type="text"],
+            textarea {
+                width: 100%;
+                padding: .5rem;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
+            }
+
+            textarea {
+                min-height: 80px;
+                resize: vertical;
+            }
+
+            .copy-btn {
+                margin-bottom: .5rem;
+            }
+
+            pre {
+                background: #f5f5f5;
+                padding: 1rem;
+                border-radius: 4px;
+                white-space: pre-wrap;
+                word-break: break-word;
+                min-height: 200px;
+                box-sizing: border-box;
+            }
+
+            /* ===== GOOGLE SNIPPET ===== */
+            .google .title {
+                color: #1a0dab;
+                font-size: 1.1em;
+            }
+
+            .google .url {
+                color: #006621;
+                font-size: .9em;
+            }
+
+            .google .desc {
+                color: #545454;
+                font-size: .9em;
+                margin-bottom: 1rem;
+            }
+
+            /* ===== PREVIEW CARDS ===== */
+            .preview-service {
+                margin-bottom: 2rem;
+            }
+
+            .preview-service h3 {
+                font-size: .85rem;
+                color: #555;
+                margin: 0 0 .5rem;
+                text-transform: uppercase;
+                letter-spacing: .05em;
+            }
+
+            .social-card {
+                display: flex;
+                background: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+                overflow: hidden;
+                max-width: 480px;
+            }
+
+            .social-card img {
+                width: 120px;
+                height: 120px;
+                object-fit: cover;
+                border-radius: 8px 0 0 8px;
+            }
+
+            .social-card .text {
+                padding: 1rem;
+            }
+
+            .social-card .text .title {
+                font-size: 1rem;
+                font-weight: bold;
+                margin-bottom: .3rem;
+            }
+
+            .social-card .text .desc {
+                font-size: .9em;
+                color: #666;
+            }
+
+            table.meta-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 1rem;
+            }
+
+            table.meta-table th,
+            table.meta-table td {
+                border: 1px solid #ddd;
+                padding: .4rem;
+                text-align: left;
+            }
+
+            table.meta-table th {
+                background: #f5f5f5;
+            }
+
+            .placeholder {
+                color: #999;
+                font-style: italic;
+            }
+
+        </style>
+    </head>
+
+    <body>
+
+        <!-- HEADER with URL input -->
+        <div class="header">
+            <div>The easiest way to</div>
+            <h1>Preview and Generate Open Graph Meta Tags</h1>
+            <div class="header-controls">
+                <input id="siteUrl" type="text" placeholder="https://www.tinyflow.agency/" />
+                <button id="checkBtn">Check Website</button>
+            </div>
+        </div>
+
+        <!-- 3‑COLUMN EDIT | CODE | PREVIEW -->
+        <div class="container">
+            <!-- EDIT -->
+            <div class="column">
+                <h2>Edit</h2>
+                <label for="titleInput">Title</label>
+                <input type="text" id="titleInput" placeholder="Page title…" />
+                <label for="descInput">Description</label>
+                <textarea id="descInput" placeholder="Page description…"></textarea>
+                <label for="imageInput">Image URL</label>
+                <input type="text" id="imageInput" placeholder="https://…" />
+            </div>
+
+            <!-- CODE -->
+            <div class="column">
+                <h2>Copy</h2>
+                <button class="copy-btn" id="copyBtn">Copy to Clipboard</button>
+                <pre><code id="metaCode"></code></pre>
+            </div>
+
+            <!-- PREVIEW -->
+            <div class="column">
+                <h2>Preview</h2>
+                <div id="preview"></div>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                // Element refs
+                const siteUrl = document.getElementById('siteUrl');
+                const checkBtn = document.getElementById('checkBtn');
+                const titleInput = document.getElementById('titleInput');
+                const descInput = document.getElementById('descInput');
+                const imageInput = document.getElementById('imageInput');
+                const metaCode = document.getElementById('metaCode');
+                const preview = document.getElementById('preview');
+                const copyBtn = document.getElementById('copyBtn');
+
+                // Fetch <meta> and <title> via AllOrigins proxy
+                async function fetchMeta(url) {
+                    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                    const proxy = 'https://api.allorigins.win/get?url=';
+                    const res = await fetch(proxy + encodeURIComponent(url));
+                    if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+                    const { contents } = await res.json();
+                    const doc = new DOMParser().parseFromString(contents, 'text/html');
+                    const pageTitle = doc.querySelector('head > title')?.textContent || '';
+                    const metas = {};
+                    doc.querySelectorAll('head meta').forEach(m => {
+                        const key = m.getAttribute('property')
+                            || m.getAttribute('name')
+                            || m.getAttribute('itemprop');
+                        const content = m.getAttribute('content');
+                        if (key && content) metas[key] = content;
+                    });
+                    return { pageTitle, metas };
+                }
+
+                // Render the Google‑style snippet inside a labeled wrapper
+                function renderGooglePreview(title, desc) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'preview-service';
+                    wrap.innerHTML = `
+        <h3>Search</h3>
+        <div class="google">
+          <div class="title">${title || '<span class="placeholder">No title</span>'}</div>
+          <div class="url">${window.location.origin}</div>
+          <div class="desc">${desc || '<span class="placeholder">No description</span>'}</div>
+        </div>
+      `;
+                    return wrap;
+                }
+
+                // Render any social card with a label
+                function renderServicePreview(platform, imgUrl, title, desc) {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'preview-service';
+                    wrap.innerHTML = `<h3>${platform.toUpperCase()}</h3>`;
+                    const card = document.createElement('div');
+                    card.className = 'social-card ' + platform.toLowerCase();
+
+                    if (imgUrl) {
+                        const img = document.createElement('img');
+                        img.src = imgUrl;
+                        img.onerror = () => img.remove();
+                        card.appendChild(img);
+                    }
+
+                    const txt = document.createElement('div');
+                    txt.className = 'text';
+                    txt.innerHTML = `
+        <div class="title">${title || '&nbsp;'}</div>
+        <div class="desc">${desc || '&nbsp;'}</div>
+      `;
+                    card.appendChild(txt);
+                    wrap.appendChild(card);
+                    return wrap;
+                }
+
+                // Generate meta‑code + live previews
+                function generateAll() {
+                    const t = titleInput.value.trim();
+                    const d = descInput.value.trim();
+                    const i = imageInput.value.trim();
+
+                    // 1) Build HTML meta‑tags
+                    const lines = [];
+                    lines.push('<!-- Basic -->');
+                    if (t) lines.push(`<title>${t}</title>`);
+                    if (d) lines.push(`<meta name="description" content="${d}">`);
+                    lines.push('');
+                    lines.push('<!-- Open Graph -->');
+                    if (t) lines.push(`<meta property="og:title" content="${t}">`);
+                    if (d) lines.push(`<meta property="og:description" content="${d}">`);
+                    if (i) lines.push(`<meta property="og:image" content="${i}">`);
+                    lines.push(`<meta property="og:type" content="website">`);
+                    lines.push('');
+                    lines.push('<!-- Twitter -->');
+                    if (i) lines.push(`<meta name="twitter:card" content="summary_large_image">`);
+                    if (t) lines.push(`<meta name="twitter:title" content="${t}">`);
+                    if (d) lines.push(`<meta name="twitter:description" content="${d}">`);
+                    if (i) lines.push(`<meta name="twitter:image" content="${i}">`);
+                    metaCode.textContent = lines.join('\n');
+
+                    // 2) Render Previews
+                    preview.innerHTML = '';
+                    preview.appendChild(renderGooglePreview(t, d));
+                    preview.appendChild(renderServicePreview('Facebook', i, t, d));
+                    preview.appendChild(renderServicePreview('Twitter', i, t, d));
+                    preview.appendChild(renderServicePreview('LinkedIn', i, t, d));
+                    preview.appendChild(renderServicePreview('Pinterest', i, t, d));
+
+                    // 3) Raw meta‑table
+                    const table = document.createElement('table');
+                    table.className = 'meta-table';
+                    const rows = [];
+                    t && rows.push(['title', t]);
+                    d && rows.push(['description', d]);
+                    t && rows.push(['og:title', t]);
+                    d && rows.push(['og:description', d]);
+                    i && rows.push(['og:image', i]);
+                    rows.push(['og:type', 'website']);
+                    i && rows.push(['twitter:card', 'summary_large_image']);
+                    t && rows.push(['twitter:title', t]);
+                    d && rows.push(['twitter:description', d]);
+                    i && rows.push(['twitter:image', i]);
+                    table.innerHTML = `
+        <thead><tr><th>Meta Key</th><th>Content</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}
+        </tbody>
+      `;
+                    preview.appendChild(table);
+                }
+
+                // — Event listeners —
+                [titleInput, descInput, imageInput].forEach(el =>
+                    el.addEventListener('input', generateAll)
+                );
+                copyBtn.addEventListener('click', () =>
+                    navigator.clipboard.writeText(metaCode.textContent)
+                        .then(() => alert('Copied to clipboard!'))
+                );
+
+                checkBtn.addEventListener('click', async () => {
+                    const url = siteUrl.value.trim();
+                    if (!url) return alert('Please enter a URL');
+                    try {
+                        const { pageTitle, metas } = await fetchMeta(url);
+                        titleInput.value = pageTitle || '';
+                        descInput.value = metas['description']
+                            || metas['og:description']
+                            || '';
+                        imageInput.value = metas['og:image']
+                            || metas['twitter:image']
+                            || '';
+                        generateAll();
+                    } catch (err) {
+                        console.error(err);
+                        alert('Failed to fetch metadata:\n' + err.message);
+                    }
+                });
+
+                // Initialize
+                generateAll();
+            })();
+        </script>
+    </body>
+
+</html>
