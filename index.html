@@ -387,14 +387,25 @@
                         uploadedImgUrl = metas['og:image'] || metas['twitter:image'] || '';
 
                         generateAll();
+                        const enc = encodeURIComponent(siteUrl.value.trim());
+                        history.replaceState(null, '', `index.html?url=${enc}`);
                     } catch (err) {
                         console.error(err);
                         alert('Failed to fetch metadata:\n' + err.message);
                     }
                 });
 
+                (function handleRoute() {
+                    const params = new URLSearchParams(window.location.search);
+                    const raw = params.get("url");
+                    if (raw) {
+                        siteUrl.value = raw;
+                        checkBtn.click();
+                    }
+                })();
                 // Initialize
                 generateAll();
+
             })();
         </script>
     </body>
