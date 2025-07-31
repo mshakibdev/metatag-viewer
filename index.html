@@ -210,8 +210,8 @@
                 <input type="text" id="titleInput" placeholder="Page title…" />
                 <label for="descInput">Description</label>
                 <textarea id="descInput" placeholder="Page description…"></textarea>
-                <label for="imageInput">Image URL</label>
-                <input type="text" id="imageInput" placeholder="https://…" />
+                <label for="imageInput">Upload Image</label>
+                <input type="file" id="imageInput" accept="image/*" />
             </div>
 
             <!-- CODE -->
@@ -239,6 +239,15 @@
                 const metaCode = document.getElementById('metaCode');
                 const preview = document.getElementById('preview');
                 const copyBtn = document.getElementById('copyBtn');
+                let uploadedImgUrl = ''; // Store the uploaded image blob URL
+
+                imageInput.addEventListener('change', () => {
+                    const file = imageInput.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        uploadedImgUrl = URL.createObjectURL(file);
+                        generateAll();
+                    }
+                });
 
                 // Fetch <meta> and <title> via AllOrigins proxy
                 async function fetchMeta(url) {
@@ -265,13 +274,13 @@
                     const wrap = document.createElement('div');
                     wrap.className = 'preview-service';
                     wrap.innerHTML = `
-        <h3>Search</h3>
-        <div class="google">
-          <div class="title">${title || '<span class="placeholder">No title</span>'}</div>
-          <div class="url">${window.location.origin}</div>
-          <div class="desc">${desc || '<span class="placeholder">No description</span>'}</div>
-        </div>
-      `;
+                                        <h3>Google</h3>
+                                        <div class="google">
+                                        <div class="title">${title || '<span class="placeholder">No title</span>'}</div>
+                                        <div class="url">${window.location.origin}</div>
+                                        <div class="desc">${desc || '<span class="placeholder">No description</span>'}</div>
+                                        </div>
+                                    `;
                     return wrap;
                 }
 
@@ -293,9 +302,9 @@
                     const txt = document.createElement('div');
                     txt.className = 'text';
                     txt.innerHTML = `
-        <div class="title">${title || '&nbsp;'}</div>
-        <div class="desc">${desc || '&nbsp;'}</div>
-      `;
+                                        <div class="title">${title || '&nbsp;'}</div>
+                                        <div class="desc">${desc || '&nbsp;'}</div>
+                                    `;
                     card.appendChild(txt);
                     wrap.appendChild(card);
                     return wrap;
@@ -305,7 +314,7 @@
                 function generateAll() {
                     const t = titleInput.value.trim();
                     const d = descInput.value.trim();
-                    const i = imageInput.value.trim();
+                    const i = uploadedImgUrl; // Use uploaded image
 
                     // 1) Build HTML meta‑tags
                     const lines = [];
@@ -335,32 +344,32 @@
                     preview.appendChild(renderServicePreview('Pinterest', i, t, d));
 
                     // 3) Raw meta‑table
-                    const table = document.createElement('table');
-                    table.className = 'meta-table';
-                    const rows = [];
-                    t && rows.push(['title', t]);
-                    d && rows.push(['description', d]);
-                    t && rows.push(['og:title', t]);
-                    d && rows.push(['og:description', d]);
-                    i && rows.push(['og:image', i]);
-                    rows.push(['og:type', 'website']);
-                    i && rows.push(['twitter:card', 'summary_large_image']);
-                    t && rows.push(['twitter:title', t]);
-                    d && rows.push(['twitter:description', d]);
-                    i && rows.push(['twitter:image', i]);
-                    table.innerHTML = `
-        <thead><tr><th>Meta Key</th><th>Content</th></tr></thead>
-        <tbody>
-          ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}
-        </tbody>
-      `;
-                    preview.appendChild(table);
+                    // const table = document.createElement('table');
+                    // table.className = 'meta-table';
+                    // const rows = [];
+                    // t && rows.push(['title', t]);
+                    // d && rows.push(['description', d]);
+                    // t && rows.push(['og:title', t]);
+                    // d && rows.push(['og:description', d]);
+                    // i && rows.push(['og:image', i]);
+                    // rows.push(['og:type', 'website']);
+                    // i && rows.push(['twitter:card', 'summary_large_image']);
+                    // t && rows.push(['twitter:title', t]);
+                    // d && rows.push(['twitter:description', d]);
+                    // i && rows.push(['twitter:image', i]);
+                    // table.innerHTML = `
+                    //                 <thead><tr><th>Meta Key</th><th>Content</th></tr></thead>
+                    //                 <tbody>
+                    //                 ${rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('')}
+                    //                 </tbody>
+                    //             `;
+                    // preview.appendChild(table);
                 }
 
                 // — Event listeners —
-                [titleInput, descInput, imageInput].forEach(el =>
-                    el.addEventListener('input', generateAll)
-                );
+                // [titleInput, descInput, imageInput].forEach(el =>
+                //     el.addEventListener('input', generateAll)
+                // );
                 copyBtn.addEventListener('click', () =>
                     navigator.clipboard.writeText(metaCode.textContent)
                         .then(() => alert('Copied to clipboard!'))
@@ -375,9 +384,8 @@
                         descInput.value = metas['description']
                             || metas['og:description']
                             || '';
-                        imageInput.value = metas['og:image']
-                            || metas['twitter:image']
-                            || '';
+                        uploadedImgUrl = metas['og:image'] || metas['twitter:image'] || '';
+
                         generateAll();
                     } catch (err) {
                         console.error(err);
