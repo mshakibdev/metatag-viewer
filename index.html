@@ -62,6 +62,8 @@
                 const preview = document.getElementById('preview');
                 const copyBtn = document.getElementById('copyBtn');
                 let uploadedImgUrl = ''; // Store the uploaded image blob URL
+                let fetchedFavicons = [];
+                let appleTouchIconData = null;
 
                 imageInput.addEventListener('change', () => {
                     const file = imageInput.files[0];
@@ -81,6 +83,8 @@
                     const doc = new DOMParser().parseFromString(contents, 'text/html');
                     const pageTitle = doc.querySelector('head > title')?.textContent || '';
                     const metas = {};
+                    const favicons = [];
+
                     doc.querySelectorAll('head meta').forEach(m => {
                         const key = m.getAttribute('property')
                             || m.getAttribute('name')
@@ -88,7 +92,103 @@
                         const content = m.getAttribute('content');
                         if (key && content) metas[key] = content;
                     });
-                    return { pageTitle, metas };
+
+                    // Find all favicon <link rel="icon" ...> tags
+                    doc.querySelectorAll('link[rel="icon"]').forEach(link => {
+                        favicons.push({
+                            href: link.getAttribute('href'),
+                            sizes: link.getAttribute('sizes'),
+                            type: link.getAttribute('type')
+                        });
+                    });
+
+                    // Find first apple-touch-icon
+                    let appleTouchIcon = null;
+                    doc.querySelectorAll('link[rel="apple-touch-icon"]').forEach(link => {
+                        if (!appleTouchIcon) {
+                            appleTouchIcon = {
+                                href: link.getAttribute('href'),
+                                sizes: link.getAttribute('sizes')
+                            };
+                        }
+                    });
+
+                    return { pageTitle, metas, favicons, appleTouchIcon };
+                }
+
+                function renderFaviconPreview(favicons) {
+                    if (!favicons || !favicons.length) return null;
+
+                    const wrap = document.createElement('div');
+                    wrap.className = 'image-preview';
+                    wrap.innerHTML = `<h3>Favicon(s)</h3>`;
+
+                    favicons.forEach(icon => {
+                        if (!icon.href) return;
+
+                        let src = icon.href;
+
+                        // Handle protocol-relative and relative paths
+                        if (/^\/\//.test(src)) {
+                            src = window.location.protocol + src;
+                        } else if (!/^https?:\/\//i.test(src)) {
+                            try {
+                                src = new URL(src, siteUrl.value.trim()).href;
+                            } catch {
+                                const base = siteUrl.value.trim().replace(/\/+$/, '');
+                                src = (icon.href.startsWith('/'))
+                                    ? base + icon.href
+                                    : `${base}/${icon.href}`;
+                            }
+                        }
+
+                        const label = [
+                            icon.sizes ? `Size: ${icon.sizes}` : null,
+                            icon.type ? `Type: ${icon.type}` : null
+                        ].filter(Boolean).join(' | ');
+
+                        const item = document.createElement('div');
+                        item.style.marginBottom = '0.5rem';
+                        item.innerHTML = `
+                                          <img src="${src}" alt="Favicon"
+                                               style="width:auto;max-width:48px;max-height:48px;vertical-align:middle;margin-right:0.5rem;border-radius:4px;border:1px solid #eee;background:#fff;"
+                                               onerror="this.style.display='none'" />
+                                          <span style="font-size:0.9em;color:#555">${label}</span>
+                                          <div style="font-size:0.8em;color:#888;word-break:break-all;">${src}</div>
+                                           `;
+                        wrap.appendChild(item);
+                    });
+
+                    return wrap;
+                }
+
+                function renderAppleIconPreview(icon) {
+                    if (!icon || !icon.href) return null;
+
+                    let src = icon.href;
+                    if (/^\/\//.test(src)) {
+                        src = window.location.protocol + src;
+                    } else if (!/^https?:\/\//i.test(src)) {
+                        try {
+                            src = new URL(src, siteUrl.value.trim()).href;
+                        } catch {
+                            const base = siteUrl.value.trim().replace(/\/+$/, '');
+                            src = (icon.href.startsWith('/'))
+                                ? base + icon.href
+                                : `${base}/${icon.href}`;
+                        }
+                    }
+
+                    const wrap = document.createElement('div');
+                    wrap.className = 'image-preview';
+                    wrap.innerHTML = `
+      <h3>Apple Touch Icon ${icon.sizes ? '(' + icon.sizes + ')' : ''}</h3>
+      <img src="${src}" alt="Apple Touch Icon"
+           style="width:auto;max-width:180px;max-height:180px;display:block;margin-bottom:0.3rem;"
+           onerror="this.style.display='none'" />
+      <div class="desc" style="font-size:0.9em;color:#666;">${src}</div>
+    `;
+                    return wrap;
                 }
 
                 // Render the Google‑style snippet inside a labeled wrapper
@@ -170,6 +270,17 @@
 
                     // 2) Render Previews
                     preview.innerHTML = '';
+                    // Favicons
+                    if (fetchedFavicons && fetchedFavicons.length) {
+                        const faviconEl = renderFaviconPreview(fetchedFavicons);
+                        if (faviconEl) preview.appendChild(faviconEl);
+                    }
+
+                    // Apple touch icon
+                    if (appleTouchIconData && appleTouchIconData.href) {
+                        const appleIconEl = renderAppleIconPreview(appleTouchIconData);
+                        if (appleIconEl) preview.appendChild(appleIconEl);
+                    }
 
                     // Add image preview section at the top
                     const imgPreview = renderImagePreview(i);
@@ -198,12 +309,15 @@
                     const url = siteUrl.value.trim();
                     if (!url) return alert('Please enter a URL');
                     try {
-                        const { pageTitle, metas } = await fetchMeta(url);
+                        // 👇 Destructure appleTouchIcon from the result!
+                        const { pageTitle, metas, favicons, appleTouchIcon } = await fetchMeta(url);
                         titleInput.value = pageTitle || '';
                         descInput.value = metas['description']
                             || metas['og:description']
                             || '';
                         uploadedImgUrl = metas['og:image'] || metas['twitter:image'] || '';
+                        appleTouchIconData = appleTouchIcon; // Use the correct returned value
+                        fetchedFavicons = favicons || [];
 
                         generateAll();
                         const enc = encodeURIComponent(siteUrl.value.trim());
@@ -213,6 +327,7 @@
                         alert('Failed to fetch metadata:\n' + err.message);
                     }
                 });
+
 
                 (function handleRoute() {
                     const params = new URLSearchParams(window.location.search);
