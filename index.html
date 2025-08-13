@@ -90,7 +90,7 @@
                     });
 
                     // Find all favicon <link rel="icon" ...> tags
-                    doc.querySelectorAll('link[rel*="icon"]').forEach(link => {
+                    doc.querySelectorAll('link[rel~="icon"]').forEach(link => {
                         favicons.push({
                             href: link.getAttribute('href'),
                             sizes: link.getAttribute('sizes'),
